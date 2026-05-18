@@ -29,11 +29,19 @@ export interface MLHighlightsResponse {
   content: { id: string; type: "ITEM" | "PRODUCT"; position: number }[];
 }
 
+export interface ProductMatch {
+  id: string;
+  name: string;
+  thumbnailUrl: string;
+  relevance: number; // 0–1
+}
+
 export interface MarketSample {
   categoryId: string;
   categoryName: string;
   totalCategoryItems: number;
   items: MLProductItem[];
+  topMatches: ProductMatch[];
 }
 
 export interface ScoreCriteria {
@@ -59,4 +67,5 @@ export interface AnalysisResult {
     quality: string;
     brands: string;
   };
+  topMatches: ProductMatch[];
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SearchForm } from "@/components/SearchForm";
 import { ScoreGauge } from "@/components/ScoreGauge";
 import { CriteriaBar } from "@/components/CriteriaBar";
+import { ProductGrid } from "@/components/ProductGrid";
 import type { AnalysisResult } from "@/types";
 
 export default function Home() {
@@ -71,6 +72,12 @@ export default function Home() {
             </p>
 
             <ScoreGauge score={result.score} verdict={result.verdict} />
+
+            {result.topMatches?.length > 0 && (
+              <div className="w-full border-t border-gray-800 pt-4">
+                <ProductGrid matches={result.topMatches} />
+              </div>
+            )}
 
             <div className="w-full border-t border-gray-800 pt-4 space-y-4">
               <CriteriaBar

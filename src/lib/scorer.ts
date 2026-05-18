@@ -47,7 +47,7 @@ function verdict(score: number): AnalysisResult["verdict"] {
 }
 
 export function analyzeMarket(query: string, sample: MarketSample): AnalysisResult {
-  const { items, totalCategoryItems, categoryName } = sample;
+  const { items, totalCategoryItems, categoryName, topMatches } = sample;
 
   const uniqueSellers = new Set(items.map((i) => i.seller_id)).size;
   const officialStores = items.filter((i) => i.official_store_id != null).length;
@@ -80,5 +80,6 @@ export function analyzeMarket(query: string, sample: MarketSample): AnalysisResu
       quality:    `${Math.round(premiumRatio * 100)}% de publicaciones premium (gold special/pro)`,
       brands:     `${Math.round(brandsRatio * 100)}% de publicaciones de tiendas oficiales`,
     },
+    topMatches,
   };
 }

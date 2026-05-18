@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(npm run *)",
+      "Bash(curl -s \"https://api.mercadolibre.com/sites/MLA/search?q=auriculares&limit=3\")",
+      "Bash(curl -s -A \"Mozilla/5.0\" \"https://api.mercadolibre.com/sites/MLA/search?q=auriculares&limit=3\")",
+      "Bash(curl -s \"https://api.mercadolibre.com/sites/MLA/search?q=auriculares&limit=3\" -H \"Accept: application/json\" -v)",
+      "Bash(curl -s \"https://api.mercadolibre.com/sites/MLA\")",
+      "Bash(curl -s \"https://api.mercadolibre.com/categories/MLA1051\")",
+      "Bash(curl *)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('id:',j.id,'country:',j.country_id,'status:',j.status,'seller_reputation:',j.seller_reputation?.level_id\\)\")",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

@@ -12,10 +12,17 @@ export interface MLProductItemsResponse {
   results: MLProductItem[];
 }
 
+export interface MLCategory {
+  id: string;
+  name: string;
+}
+
 export interface MLCategoryStats {
   id: string;
   name: string;
   total_items_in_this_category: number;
+  children_categories: MLCategory[];
+  picture?: string;
 }
 
 export interface MLDomainDiscoveryResult {
@@ -37,10 +44,10 @@ export interface MarketSample {
 }
 
 export interface ScoreCriteria {
-  sellers: number;     // 0–25
-  saturation: number;  // 0–25
-  quality: number;     // 0–25 (proxy: listing type distribution)
-  brands: number;      // 0–25
+  sellers: number;
+  saturation: number;
+  quality: number;
+  brands: number;
 }
 
 export interface AnalysisResult {
@@ -59,4 +66,14 @@ export interface AnalysisResult {
     quality: string;
     brands: string;
   };
+}
+
+export interface SubcategoryRanking {
+  categoryId: string;
+  categoryName: string;
+  score: number;
+  verdict: AnalysisResult["verdict"];
+  totalListings: number;
+  uniqueSellers: number;
+  premiumListingsRatio: number;
 }

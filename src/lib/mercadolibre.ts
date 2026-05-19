@@ -1,5 +1,6 @@
 import axios from "axios";
 import type {
+  MLCategory,
   MLCategoryStats,
   MLDomainDiscoveryResult,
   MLHighlightsResponse,
@@ -10,7 +11,6 @@ import type {
 const ML_API = "https://api.mercadolibre.com";
 const SITE_ID = "MLA";
 
-// Token cache — ML tokens last ~6 hours
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
@@ -49,6 +49,22 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
+export async function getTopCategories(): Promise<MLCategory[]> {
+  const token = await getAccessToken();
+  const { data } = await axios.get<MLCategory[]>(`${ML_API}/sites/${SITE_ID}/categories`, {
+    headers: authHeaders(token),
+  });
+  return data;
+}
+
+export async function getCategoryWithChildren(categoryId: string): Promise<MLCategoryStats> {
+  const token = await getAccessToken();
+  const { data } = await axios.get<MLCategoryStats>(`${ML_API}/categories/${categoryId}`, {
+    headers: authHeaders(token),
+  });
+  return data;
+}
+
 async function discoverCategory(query: string, token: string): Promise<MLDomainDiscoveryResult> {
   const { data } = await axios.get<MLDomainDiscoveryResult[]>(
     `${ML_API}/sites/${SITE_ID}/domain_discovery/search`,
@@ -83,6 +99,40 @@ async function getProductItems(productId: string, token: string, limit = 50): Pr
   return data;
 }
 
+export async function buildMarketSampleById(categoryId: string): Promise<MarketSample> {
+  const token = await getAccessToken();
+
+  const [stats, productIds] = await Promise.all([
+    getCategoryStats(categoryId, token),
+    getHighlightProductIds(categoryId, token, 20),
+  ]);
+
+  if (!productIds.length) {
+    return {
+      categoryId,
+      categoryName: stats.name,
+      totalCategoryItems: stats.total_items_in_this_category,
+      items: [],
+    };
+  }
+
+  const batch = productIds.slice(0, 10);
+  const itemResponses = await Promise.all(
+    batch.map((id) => getProductItems(id, token, 50).catch(() => null))
+  );
+
+  const items = itemResponses
+    .filter(Boolean)
+    .flatMap((r) => r!.results);
+
+  return {
+    categoryId,
+    categoryName: stats.name,
+    totalCategoryItems: stats.total_items_in_this_category,
+    items,
+  };
+}
+
 export async function buildMarketSample(query: string): Promise<MarketSample> {
   const token = await getAccessToken();
 
@@ -96,12 +146,9 @@ export async function buildMarketSample(query: string): Promise<MarketSample> {
     throw new Error(`No se encontraron productos destacados para "${query}"`);
   }
 
-  // Fetch items for first 10 products in parallel
   const batch = productIds.slice(0, 10);
   const itemResponses = await Promise.all(
-    batch.map((id) =>
-      getProductItems(id, token, 50).catch(() => null)
-    )
+    batch.map((id) => getProductItems(id, token, 50).catch(() => null))
   );
 
   const items = itemResponses

@@ -50,18 +50,12 @@ function authHeaders(token: string) {
 }
 
 export async function getTopCategories(): Promise<MLCategory[]> {
-  const token = await getAccessToken();
-  const { data } = await axios.get<MLCategory[]>(`${ML_API}/sites/${SITE_ID}/categories`, {
-    headers: authHeaders(token),
-  });
+  const { data } = await axios.get<MLCategory[]>(`${ML_API}/sites/${SITE_ID}/categories`);
   return data;
 }
 
 export async function getCategoryWithChildren(categoryId: string): Promise<MLCategoryStats> {
-  const token = await getAccessToken();
-  const { data } = await axios.get<MLCategoryStats>(`${ML_API}/categories/${categoryId}`, {
-    headers: authHeaders(token),
-  });
+  const { data } = await axios.get<MLCategoryStats>(`${ML_API}/categories/${categoryId}`);
   return data;
 }
 

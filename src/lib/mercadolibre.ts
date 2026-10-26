@@ -49,13 +49,22 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
+const PUBLIC_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+};
+
 export async function getTopCategories(): Promise<MLCategory[]> {
-  const { data } = await axios.get<MLCategory[]>(`${ML_API}/sites/${SITE_ID}/categories`);
+  const { data } = await axios.get<MLCategory[]>(`${ML_API}/sites/${SITE_ID}/categories`, {
+    headers: PUBLIC_HEADERS,
+  });
   return data;
 }
 
 export async function getCategoryWithChildren(categoryId: string): Promise<MLCategoryStats> {
-  const { data } = await axios.get<MLCategoryStats>(`${ML_API}/categories/${categoryId}`);
+  const { data } = await axios.get<MLCategoryStats>(`${ML_API}/categories/${categoryId}`, {
+    headers: PUBLIC_HEADERS,
+  });
   return data;
 }
 

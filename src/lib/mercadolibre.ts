@@ -31,9 +31,20 @@ async function getAccessToken(): Promise<string> {
     client_secret: clientSecret,
   });
 
-  const { data } = await axios.post(`${ML_API}/oauth/token`, params.toString(), {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  });
+  let tokenData;
+  try {
+    const res = await axios.post(`${ML_API}/oauth/token`, params.toString(), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    tokenData = res.data;
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status: number; data: unknown } };
+    const detail = axiosErr.response
+      ? `HTTP ${axiosErr.response.status}: ${JSON.stringify(axiosErr.response.data)}`
+      : String(err);
+    throw new Error(`Error al obtener token OAuth: ${detail}`);
+  }
+  const data = tokenData;
 
   cachedToken = {
     value: data.access_token,

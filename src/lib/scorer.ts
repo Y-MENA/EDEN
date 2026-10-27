@@ -55,6 +55,29 @@ export function analyzeMarket(query: string, sample: MarketSample): AnalysisResu
   const premiumRatio = items.length > 0 ? premiumListings / items.length : 0;
   const brandsRatio = items.length > 0 ? officialStores / items.length : 0;
 
+  // When no item sample is available, score solely on saturation (scaled to 100)
+  if (items.length === 0) {
+    const sat = scoreSaturation(totalCategoryItems);
+    const score = Math.round((sat / 25) * 100);
+    return {
+      query,
+      categoryName,
+      totalListings: totalCategoryItems,
+      uniqueSellers: 0,
+      officialStores: 0,
+      premiumListingsRatio: 0,
+      score,
+      criteria: { sellers: 0, saturation: sat, quality: 0, brands: 0 },
+      verdict: verdict(score),
+      details: {
+        sellers: "Sin datos de muestra",
+        saturation: `${totalCategoryItems.toLocaleString("es-AR")} publicaciones en "${categoryName}"`,
+        quality: "Sin datos de muestra",
+        brands: "Sin datos de muestra",
+      },
+    };
+  }
+
   const criteria: ScoreCriteria = {
     sellers:    scoreSellers(uniqueSellers),
     saturation: scoreSaturation(totalCategoryItems),

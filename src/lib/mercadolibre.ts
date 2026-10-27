@@ -93,29 +93,13 @@ async function getCategoryStats(categoryId: string, token: string): Promise<MLCa
 
 export async function buildMarketSampleById(categoryId: string): Promise<MarketSample> {
   const token = await getAccessToken();
-
-  const [stats, searchRes] = await Promise.all([
-    getCategoryStats(categoryId, token),
-    axios.get<{ paging: { total: number }; results: Array<{ id: string; seller: { id: number }; official_store_id: number | null; listing_type_id: string; price: number; category_id: string }> }>(
-      `${ML_API}/sites/${SITE_ID}/search`,
-      { params: { category: categoryId, limit: 50 }, headers: authHeaders(token) }
-    ),
-  ]);
-
-  const items = searchRes.data.results.map((r) => ({
-    item_id: r.id,
-    seller_id: r.seller.id,
-    official_store_id: r.official_store_id,
-    listing_type_id: r.listing_type_id,
-    price: r.price,
-    category_id: r.category_id,
-  }));
+  const stats = await getCategoryStats(categoryId, token);
 
   return {
     categoryId,
     categoryName: stats.name,
     totalCategoryItems: stats.total_items_in_this_category,
-    items,
+    items: [],
   };
 }
 

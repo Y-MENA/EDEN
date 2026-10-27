@@ -27,12 +27,11 @@ async function fetchToken(): Promise<string> {
 }
 
 async function analyzeCategory(categoryId: string, categoryName: string, token: string): Promise<SubcategoryRanking> {
-  const r = await fetch(
-    `https://api.mercadolibre.com/sites/MLA/search?category=${categoryId}&limit=50`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const r = await fetch(`/api/search/${categoryId}`, {
+    headers: { "X-ML-Token": token },
+  });
   const data = await r.json();
-  if (!r.ok) throw new Error(data.message || `Error ${r.status}`);
+  if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
 
   const items = (data.results ?? []).map((item: { id: string; seller: { id: number }; official_store_id: number | null; listing_type_id: string; price: number; category_id: string }) => ({
     item_id: item.id,

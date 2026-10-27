@@ -43,7 +43,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             uniqueSellers: result.uniqueSellers,
             premiumListingsRatio: result.premiumListingsRatio,
           };
-        } catch {
+        } catch (e: unknown) {
+          console.error(`[rank] failed ${child.id}:`, e instanceof Error ? e.message : String(e));
           return null;
         }
       })

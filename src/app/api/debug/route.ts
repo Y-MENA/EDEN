@@ -30,19 +30,26 @@ export async function GET() {
 
     const accessToken = tokenData.access_token;
 
-    // Test search with fetch directly
-    const searchRes = await fetch(
-      "https://api.mercadolibre.com/sites/MLA/search?category=MLA1000&limit=5",
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const searchData = await searchRes.json();
+    // Test 1: search WITH token
+    const s1 = await fetch("https://api.mercadolibre.com/sites/MLA/search?category=MLA1000&limit=3", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const d1 = await s1.json();
+
+    // Test 2: search WITHOUT token (public)
+    const s2 = await fetch("https://api.mercadolibre.com/sites/MLA/search?category=MLA1000&limit=3");
+    const d2 = await s2.json();
+
+    // Test 3: highlights WITH token
+    const s3 = await fetch("https://api.mercadolibre.com/highlights/MLA/category/MLA1000?limit=5", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const d3 = await s3.json();
 
     return NextResponse.json({
-      step: searchRes.ok ? "search_ok" : "search_failed",
-      searchStatus: searchRes.status,
-      searchResponse: searchRes.ok
-        ? { total: searchData.paging?.total, itemCount: searchData.results?.length }
-        : searchData,
+      search_with_token: { status: s1.status, ok: s1.ok, data: s1.ok ? { total: d1.paging?.total } : d1 },
+      search_no_token:   { status: s2.status, ok: s2.ok, data: s2.ok ? { total: d2.paging?.total } : d2 },
+      highlights_token:  { status: s3.status, ok: s3.ok, data: s3.ok ? { count: d3.content?.length } : d3 },
     });
   } catch (err: unknown) {
     return NextResponse.json({ step: "fetch_error", error: String(err) });

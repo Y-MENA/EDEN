@@ -28,13 +28,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/categories")
+    fetch("https://api.mercadolibre.com/sites/MLA/categories")
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) setCategories(data);
-        else setError(data.error ?? "Error al cargar categorías");
+        else setError("Error al cargar categorías");
       })
-      .catch(() => setError("No se pudo conectar con el servidor"))
+      .catch(() => setError("No se pudo conectar con MercadoLibre"))
       .finally(() => setLoading(false));
   }, []);
 

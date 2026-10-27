@@ -89,15 +89,19 @@ export default function RankingPage() {
         setTotal(targets.length);
 
         const results: SubcategoryRanking[] = [];
+        const errors: string[] = [];
         for (const child of targets) {
           try {
             const row = await analyzeCategory(child.id, child.name, token);
             results.push(row);
             setRanking([...results].sort((a, b) => b.score - a.score));
-          } catch {
-            // skip failed categories silently
+          } catch (e: unknown) {
+            errors.push(`${child.name}: ${e instanceof Error ? e.message : String(e)}`);
           }
           setProgress(p => p + 1);
+        }
+        if (results.length === 0 && errors.length > 0) {
+          setError(errors[0]);
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "No se pudo conectar");

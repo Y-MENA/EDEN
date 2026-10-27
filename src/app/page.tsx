@@ -28,12 +28,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("https://api.mercadolibre.com/sites/MLA/categories")
+    fetch("/api/categories")
       .then(async (r) => {
         const data = await r.json();
-        if (!r.ok) throw new Error(`ML error ${r.status}: ${data?.message || data?.error || JSON.stringify(data).slice(0, 120)}`);
+        if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
         if (Array.isArray(data)) setCategories(data);
-        else throw new Error(`Respuesta inesperada: ${JSON.stringify(data).slice(0, 120)}`);
+        else throw new Error("Respuesta inesperada del servidor");
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "No se pudo conectar con MercadoLibre"))
       .finally(() => setLoading(false));

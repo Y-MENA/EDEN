@@ -3,8 +3,6 @@ import type {
   MLCategory,
   MLCategoryStats,
   MLDomainDiscoveryResult,
-  MLHighlightsResponse,
-  MLProductItemsResponse,
   MarketSample,
 } from "@/types";
 
@@ -49,21 +47,19 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
-const PUBLIC_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "application/json",
-};
 
 export async function getTopCategories(): Promise<MLCategory[]> {
+  const token = await getAccessToken();
   const { data } = await axios.get<MLCategory[]>(`${ML_API}/sites/${SITE_ID}/categories`, {
-    headers: PUBLIC_HEADERS,
+    headers: authHeaders(token),
   });
   return data;
 }
 
 export async function getCategoryWithChildren(categoryId: string): Promise<MLCategoryStats> {
+  const token = await getAccessToken();
   const { data } = await axios.get<MLCategoryStats>(`${ML_API}/categories/${categoryId}`, {
-    headers: PUBLIC_HEADERS,
+    headers: authHeaders(token),
   });
   return data;
 }
@@ -84,49 +80,25 @@ async function getCategoryStats(categoryId: string, token: string): Promise<MLCa
   return data;
 }
 
-async function getHighlightProductIds(categoryId: string, token: string, limit = 20): Promise<string[]> {
-  const { data } = await axios.get<MLHighlightsResponse>(
-    `${ML_API}/highlights/${SITE_ID}/category/${categoryId}`,
-    { params: { limit }, headers: authHeaders(token) }
-  );
-  return data.content
-    .filter((c) => c.type === "PRODUCT")
-    .map((c) => c.id);
-}
-
-async function getProductItems(productId: string, token: string, limit = 50): Promise<MLProductItemsResponse> {
-  const { data } = await axios.get<MLProductItemsResponse>(
-    `${ML_API}/products/${productId}/items`,
-    { params: { limit }, headers: authHeaders(token) }
-  );
-  return data;
-}
-
 export async function buildMarketSampleById(categoryId: string): Promise<MarketSample> {
   const token = await getAccessToken();
 
-  const [stats, productIds] = await Promise.all([
+  const [stats, searchRes] = await Promise.all([
     getCategoryStats(categoryId, token),
-    getHighlightProductIds(categoryId, token, 20),
+    axios.get<{ paging: { total: number }; results: Array<{ id: string; seller: { id: number }; official_store_id: number | null; listing_type_id: string; price: number; category_id: string }> }>(
+      `${ML_API}/sites/${SITE_ID}/search`,
+      { params: { category: categoryId, limit: 50 }, headers: authHeaders(token) }
+    ),
   ]);
 
-  if (!productIds.length) {
-    return {
-      categoryId,
-      categoryName: stats.name,
-      totalCategoryItems: stats.total_items_in_this_category,
-      items: [],
-    };
-  }
-
-  const batch = productIds.slice(0, 10);
-  const itemResponses = await Promise.all(
-    batch.map((id) => getProductItems(id, token, 50).catch(() => null))
-  );
-
-  const items = itemResponses
-    .filter(Boolean)
-    .flatMap((r) => r!.results);
+  const items = searchRes.data.results.map((r) => ({
+    item_id: r.id,
+    seller_id: r.seller.id,
+    official_store_id: r.official_store_id,
+    listing_type_id: r.listing_type_id,
+    price: r.price,
+    category_id: r.category_id,
+  }));
 
   return {
     categoryId,
@@ -140,28 +112,5 @@ export async function buildMarketSample(query: string): Promise<MarketSample> {
   const token = await getAccessToken();
 
   const category = await discoverCategory(query, token);
-  const [stats, productIds] = await Promise.all([
-    getCategoryStats(category.category_id, token),
-    getHighlightProductIds(category.category_id, token, 20),
-  ]);
-
-  if (!productIds.length) {
-    throw new Error(`No se encontraron productos destacados para "${query}"`);
-  }
-
-  const batch = productIds.slice(0, 10);
-  const itemResponses = await Promise.all(
-    batch.map((id) => getProductItems(id, token, 50).catch(() => null))
-  );
-
-  const items = itemResponses
-    .filter(Boolean)
-    .flatMap((r) => r!.results);
-
-  return {
-    categoryId: category.category_id,
-    categoryName: category.category_name,
-    totalCategoryItems: stats.total_items_in_this_category,
-    items,
-  };
+  return buildMarketSampleById(category.category_id);
 }

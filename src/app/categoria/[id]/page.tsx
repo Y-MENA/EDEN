@@ -12,13 +12,13 @@ export default function CategoriaPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`https://api.mercadolibre.com/categories/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) setError(d.error);
-        else setData(d);
+    fetch(`/api/categories/${id}`)
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d?.error || `Error ${r.status}`);
+        setData(d);
       })
-      .catch(() => setError("No se pudo conectar con MercadoLibre"))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "No se pudo conectar con MercadoLibre"))
       .finally(() => setLoading(false));
   }, [id]);
 

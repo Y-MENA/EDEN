@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { buildMarketSampleById } from "@/lib/mercadolibre";
 
 export async function GET() {
   const clientId = process.env.ML_CLIENT_ID;
@@ -29,13 +28,22 @@ export async function GET() {
       });
     }
 
-    // Test search API with a known category (Computación = MLA1000)
-    try {
-      const sample = await buildMarketSampleById("MLA1000");
-      return NextResponse.json({ step: "search_ok", itemCount: sample.items.length, totalListings: sample.totalCategoryItems, categoryName: sample.categoryName });
-    } catch (searchErr: unknown) {
-      return NextResponse.json({ step: "search_failed", error: searchErr instanceof Error ? searchErr.message : String(searchErr) });
-    }
+    const accessToken = tokenData.access_token;
+
+    // Test search with fetch directly
+    const searchRes = await fetch(
+      "https://api.mercadolibre.com/sites/MLA/search?category=MLA1000&limit=5",
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const searchData = await searchRes.json();
+
+    return NextResponse.json({
+      step: searchRes.ok ? "search_ok" : "search_failed",
+      searchStatus: searchRes.status,
+      searchResponse: searchRes.ok
+        ? { total: searchData.paging?.total, itemCount: searchData.results?.length }
+        : searchData,
+    });
   } catch (err: unknown) {
     return NextResponse.json({ step: "fetch_error", error: String(err) });
   }

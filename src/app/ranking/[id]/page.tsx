@@ -1,9 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { SubcategoryRanking } from "@/types";
+import { analyzeMarket } from "@/lib/scorer";
+
+interface MLSearchItem {
+  id: string;
+  seller: { id: number };
+  official_store_id: number | null;
+  listing_type_id: string;
+  price: number;
+  category_id: string;
+}
+
+interface MLSearchResponse {
+  paging: { total: number };
+  results: MLSearchItem[];
+}
+
+interface MLCategory {
+  id: string;
+  name: string;
+}
+
+interface MLCategoryData {
+  id: string;
+  name: string;
+  children_categories: MLCategory[];
+  total_items_in_this_category: number;
+}
 
 const VERDICT_COLOR: Record<string, string> = {
   Excelente: "text-green-400",
@@ -19,27 +45,89 @@ const VERDICT_BG: Record<string, string> = {
   Saturado: "bg-red-500/10 border-red-500/30",
 };
 
+async function analyzeSingleCategory(categoryId: string, categoryName: string): Promise<SubcategoryRanking> {
+  const r = await fetch(
+    `https://api.mercadolibre.com/sites/MLA/search?category=${categoryId}&limit=50`
+  );
+  const data: MLSearchResponse = await r.json();
+
+  const items = data.results.map((item) => ({
+    item_id: item.id,
+    seller_id: item.seller.id,
+    official_store_id: item.official_store_id,
+    listing_type_id: item.listing_type_id,
+    price: item.price,
+    category_id: item.category_id,
+  }));
+
+  const result = analyzeMarket(categoryName, {
+    categoryId,
+    categoryName,
+    totalCategoryItems: data.paging.total,
+    items,
+  });
+
+  return {
+    categoryId,
+    categoryName,
+    score: result.score,
+    verdict: result.verdict,
+    totalListings: result.totalListings,
+    uniqueSellers: result.uniqueSellers,
+    premiumListingsRatio: result.premiumListingsRatio,
+  };
+}
+
 export default function RankingPage() {
   const { id } = useParams<{ id: string }>();
   const [ranking, setRanking] = useState<SubcategoryRanking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/rank/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) setError(d.error);
-        else setRanking(d);
-      })
-      .catch(() => setError("No se pudo conectar con el servidor"))
-      .finally(() => setLoading(false));
+    async function run() {
+      try {
+        const r = await fetch(`https://api.mercadolibre.com/categories/${id}`);
+        const cat: MLCategoryData = await r.json();
+
+        const targets: MLCategory[] =
+          cat.children_categories.length > 0
+            ? cat.children_categories.slice(0, 15)
+            : [{ id: cat.id, name: cat.name }];
+
+        setTotal(targets.length);
+
+        const results: SubcategoryRanking[] = [];
+        for (const child of targets) {
+          try {
+            const row = await analyzeSingleCategory(child.id, child.name);
+            results.push(row);
+          } catch {
+            // skip failures silently
+          }
+          setProgress((p) => p + 1);
+        }
+
+        setRanking(results.sort((a, b) => b.score - a.score));
+      } catch {
+        setError("No se pudo conectar con MercadoLibre");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    run();
   }, [id]);
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-16 gap-8">
       <div className="w-full max-w-2xl">
-        <button onClick={() => window.history.back()} className="text-gray-500 hover:text-green-400 text-sm transition-colors">
+        <button
+          onClick={() => window.history.back()}
+          className="text-gray-500 hover:text-green-400 text-sm transition-colors"
+        >
           ← Volver
         </button>
       </div>
@@ -48,15 +136,17 @@ export default function RankingPage() {
         <h1 className="text-3xl font-bold text-white">
           E<span className="text-green-500">DEN</span>
         </h1>
-        <p className="text-gray-400 text-sm">
-          Ranking de oportunidades de venta
-        </p>
+        <p className="text-gray-400 text-sm">Ranking de oportunidades de venta</p>
       </div>
 
       {loading && (
         <div className="flex flex-col items-center gap-3">
           <p className="text-gray-400 animate-pulse text-sm">Analizando el mercado...</p>
-          <p className="text-gray-600 text-xs">Esto puede tardar unos segundos</p>
+          {total > 0 && (
+            <p className="text-gray-600 text-xs">
+              {progress} de {total} categorías analizadas
+            </p>
+          )}
         </div>
       )}
 
@@ -68,7 +158,9 @@ export default function RankingPage() {
 
       {!loading && !error && ranking.length > 0 && (
         <div className="w-full max-w-2xl space-y-3">
-          <p className="text-gray-500 text-xs text-right">{ranking.length} productos analizados · ordenados por oportunidad</p>
+          <p className="text-gray-500 text-xs text-right">
+            {ranking.length} categorías analizadas · ordenadas por oportunidad
+          </p>
           {ranking.map((item, index) => (
             <div
               key={item.categoryId}

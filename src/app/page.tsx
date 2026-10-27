@@ -29,12 +29,13 @@ export default function Home() {
 
   useEffect(() => {
     fetch("https://api.mercadolibre.com/sites/MLA/categories")
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(`ML error ${r.status}: ${data?.message || data?.error || JSON.stringify(data).slice(0, 120)}`);
         if (Array.isArray(data)) setCategories(data);
-        else setError("Error al cargar categorías");
+        else throw new Error(`Respuesta inesperada: ${JSON.stringify(data).slice(0, 120)}`);
       })
-      .catch(() => setError("No se pudo conectar con MercadoLibre"))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "No se pudo conectar con MercadoLibre"))
       .finally(() => setLoading(false));
   }, []);
 
